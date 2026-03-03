@@ -17,16 +17,20 @@ fn get_quantum_number(prompt: &str, default: i32) -> i32 {
         print!("{} (default: {}): ", prompt, default);
         io::stdout().flush().unwrap();
         let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("Failed to read line");
-        
+        io::stdin()
+            .read_line(&mut input)
+            .expect("Failed to read line");
+
         let trimmed = input.trim();
         if trimmed.is_empty() {
             return default;
         }
-        
+
         match trimmed.parse::<i32>() {
             Ok(num) => return num,
-            Err(_) => println!("Invalid input. Please enter an integer or press Enter for default."),
+            Err(_) => {
+                println!("Invalid input. Please enter an integer or press Enter for default.")
+            }
         }
     }
 }
@@ -37,7 +41,7 @@ fn main() {
     let n = get_quantum_number("Principal quantum number (n)", 2);
     let l = get_quantum_number("Azimuthal quantum number (l)", 1);
     let m = get_quantum_number("Magnetic quantum number (m)", 0);
-    
+
     // --- Set initial physics state ---
     *physics::N.lock().unwrap() = n;
     *physics::L.lock().unwrap() = l;
@@ -47,7 +51,12 @@ fn main() {
     let mut glfw = glfw::init(glfw::fail_on_errors).unwrap();
     let (win_width, win_height) = (1280, 720);
     let (mut window, events) = glfw
-        .create_window(win_width as u32, win_height as u32, "Atom Simulator", glfw::WindowMode::Windowed)
+        .create_window(
+            win_width as u32,
+            win_height as u32,
+            "Atom Simulator",
+            glfw::WindowMode::Windowed,
+        )
         .expect("Failed to create GLFW window.");
     window.make_current();
     window.set_key_polling(true);
@@ -58,8 +67,18 @@ fn main() {
 
     // --- Create rendering objects ---
     let shader_program = unsafe {
-        let vs_src = CString::new(fs::read_to_string("src/vertex_shader.glsl").unwrap().as_bytes()).unwrap();
-        let fs_src = CString::new(fs::read_to_string("src/fragment_shader.glsl").unwrap().as_bytes()).unwrap();
+        let vs_src = CString::new(
+            fs::read_to_string("src/vertex_shader.glsl")
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
+        let fs_src = CString::new(
+            fs::read_to_string("src/fragment_shader.glsl")
+                .unwrap()
+                .as_bytes(),
+        )
+        .unwrap();
         ShaderProgram::new(&vs_src, &fs_src)
     };
     let sphere_vertices = generate_sphere(1.0, 10, 10);
@@ -80,7 +99,9 @@ fn main() {
     let proj_name = CString::new("projection").unwrap();
 
     // Enable Depth Test
-    unsafe { gl::Enable(gl::DEPTH_TEST); }
+    unsafe {
+        gl::Enable(gl::DEPTH_TEST);
+    }
 
     while !window.should_close() {
         // --- Event Handling ---
@@ -108,11 +129,21 @@ fn main() {
             sphere.bind();
             for particle in &particles {
                 let mut model = glm::identity();
-                let pos_f32 = glm::vec3(particle.position.x as f32, particle.position.y as f32, particle.position.z as f32);
+                let pos_f32 = glm::vec3(
+                    particle.position.x as f32,
+                    particle.position.y as f32,
+                    particle.position.z as f32,
+                );
                 model = glm::translate(&model, &pos_f32);
                 model = glm::scale(&model, &glm::vec3(0.05, 0.05, 0.05));
                 shader_program.set_uniform_mat4(&model_name, &model);
-                shader_program.set_uniform_4f(&color_name, particle.color.x, particle.color.y, particle.color.z, particle.color.w);
+                shader_program.set_uniform_4f(
+                    &color_name,
+                    particle.color.x,
+                    particle.color.y,
+                    particle.color.z,
+                    particle.color.w,
+                );
                 gl::DrawArrays(gl::TRIANGLES, 0, sphere.vertex_count());
             }
         }
@@ -120,7 +151,11 @@ fn main() {
     }
 }
 
-fn handle_window_event(window: &mut glfw::Window, event: &glfw::WindowEvent, camera: &Arc<Mutex<Camera>>) {
+fn handle_window_event(
+    window: &mut glfw::Window,
+    event: &glfw::WindowEvent,
+    camera: &Arc<Mutex<Camera>>,
+) {
     match event {
         glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
             window.set_should_close(true);
@@ -130,7 +165,10 @@ fn handle_window_event(window: &mut glfw::Window, event: &glfw::WindowEvent, cam
         }
         glfw::WindowEvent::MouseButton(button, action, _) => {
             let pos = window.get_cursor_pos();
-            camera.lock().unwrap().process_mouse_button(*button, *action, pos.0, pos.1);
+            camera
+                .lock()
+                .unwrap()
+                .process_mouse_button(*button, *action, pos.0, pos.1);
         }
         glfw::WindowEvent::Scroll(_, y_offset) => {
             camera.lock().unwrap().process_scroll(*y_offset);

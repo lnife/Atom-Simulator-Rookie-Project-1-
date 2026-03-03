@@ -1,150 +1,172 @@
-# Electron-Cloud
+# Electron Cloud (OpenGL Edition)
 
-**Electron-Cloud** is a modular scientific computing toolkit written in Rust, designed to explore and implement foundational concepts in electronic structure theory and quantum chemistry.
+A hydrogenic orbital visualization toolkit written in Rust using OpenGL (GL + GLSL) through C library bindings.
 
-The project aims to bridge theoretical chemistry and modern systems-level programming by building numerically stable, memory-safe, and extensible abstractions for quantum mechanical modeling.
+This version focuses on lower-level GPU control and explicit shader-based rendering while preserving the same quantum mechanical sampling framework as the wgpu edition.
 
 ---
 
-## Motivation
+## Overview
 
-Electronic structure theory forms the backbone of computational chemistry, yet many implementations remain opaque or tightly coupled to legacy architectures.
+Electron Cloud (OpenGL Edition) generates Monte Carlo samples of hydrogenic orbitals defined by quantum numbers (n, l, m) and renders them using OpenGL instanced drawing.
 
-Electron-Cloud was created to:
+Instead of plotting analytic surfaces, the wavefunction is sampled probabilistically:
 
-- Develop a clean, modular foundation for quantum chemical modeling
-- Explore electronic structure methods from first principles
-- Leverage Rust’s memory safety and performance guarantees
-- Build transparent implementations for educational and research purposes
+- Radial distribution sampled from |Rₙₗ(r)|² r²  
+- Angular distribution sampled from |Pₗᵐ(cosθ)|² sinθ  
+- Azimuthal angle φ sampled uniformly  
 
-This project reflects an ongoing effort to better understand and implement the mathematical structures underlying quantum chemical computations.
+Each sample is rendered as a small sphere instance.  
+Color encodes probability density intensity.
+
+This implementation uses:
+
+- OpenGL for rendering
+- GLSL vertex and fragment shaders
+- Explicit buffer management
+- C-library bindings via Rust FFI
+
+---
+
+## Why an OpenGL Version?
+
+The wgpu version abstracts much of the graphics pipeline.
+
+This version intentionally moves closer to the metal:
+
+- Manual shader compilation (GLSL)
+- Explicit VAO/VBO setup
+- Direct buffer uploads
+- Classic rendering pipeline control
+
+It exists to better understand:
+
+- How instanced rendering works in traditional OpenGL
+- How GPU memory buffers are structured
+- How vertex attributes are passed to shaders
+- The differences between modern Rust-native GPU APIs and C-based graphics APIs
+
+---
+
+## Architecture
+
+### Physics Layer
+
+Identical to the Rust-native version:
+
+- Associated Laguerre polynomials
+- Associated Legendre polynomials
+- Radial and angular CDF construction
+- Inverse transform sampling
+- Monte Carlo particle generation
+
+All numerical sampling is CPU-side in `f64`.
+
+---
+
+### Rendering Layer (OpenGL)
+
+- Sphere mesh generated on CPU
+- Vertex Buffer Objects (VBO)
+- Vertex Array Objects (VAO)
+- Instanced attributes for position and color
+- GLSL shaders for transformation and color output
+- Depth testing enabled
+
+The vertex shader handles:
+
+- Model scaling
+- Instance translation
+- View-projection transformation
+
+The fragment shader outputs color directly.
+
+---
+
+## Numerical Strategy
+
+### Radial Sampling
+
+- Discretized CDF
+- Cached per (n, l)
+- Binary search inversion
+
+### Angular Sampling
+
+- Discretized CDF
+- Cached per (l, |m|)
+
+This avoids recomputing expensive polynomial evaluations for every particle.
+
+---
+
+## Controls
+
+Mouse Drag → Orbit camera  
+Scroll → Zoom  
+Escape → Exit  
+
+---
+
+## Running
+
+Ensure OpenGL support is available on your system.
+
+```
+cargo run --release
+```
+
+You will be prompted for:
+
+- Principal quantum number (n)
+- Azimuthal quantum number (l)
+- Magnetic quantum number (m)
+- Particle count
+
+---
+
+## Differences from the wgpu Version
+
+| wgpu Version           | OpenGL Version               |
+| ---------------------- | ---------------------------- |
+| Rust-native GPU API    | C-based OpenGL bindings      |
+| Pipeline descriptors   | Manual shader + buffer setup |
+| Implicit safety layers | Explicit state management    |
+| Modern abstraction     | Classic graphics pipeline    |
+
+The physics is identical.  
+The rendering philosophy is different.
+
+---
+
+## Limitations
+
+- Hydrogenic orbitals only
+- CPU-based sampling
+- No lighting model
+- Performance bound by particle count
+- Requires OpenGL support
 
 ---
 
 ## Design Philosophy
 
-Electron-Cloud is built around the following principles:
+This edition prioritizes understanding traditional GPU pipelines.
 
-### 1. Theoretical Clarity
+Where the wgpu version explores modern Rust GPU abstractions, this version explores:
 
-Algorithms and structures are implemented in a way that mirrors their formal mathematical definitions wherever possible.
+- Graphics pipeline fundamentals
+- Shader programming
+- Manual buffer orchestration
+- The cost of explicit state control
 
-### 2. Modularity
-
-Core components (basis sets, operators, wavefunctions, integrals) are designed to be loosely coupled and extensible.
-
-### 3. Numerical Stability
-
-Attention is given to precision handling, structured linear algebra workflows, and reproducible computation.
-
-### 4. Memory Safety & Performance
-
-Rust enables:
-
-- Zero-cost abstractions
-- Ownership-based memory guarantees
-- Safe concurrency for future scalability
-
----
-
-## Core Concepts (In Development)
-
-The project is evolving and currently focuses on foundational building blocks for:
-
-- Representation of basis functions
-- Linear algebra structures for quantum systems
-- Operator formalism (Hamiltonians, overlap matrices)
-- Wavefunction modeling
-- Numerical integration frameworks
-
-Future expansions aim toward:
-
-- Hartree–Fock implementation
-- Density functional theory scaffolding
-- Orbital visualization utilities
-- Modular excited-state extensions
-
----
-
-## Why Rust?
-
-Rust offers several advantages for scientific computing:
-
-- Strong compile-time safety guarantees
-- Fine-grained memory control
-- Concurrency without data races
-- Performance comparable to C/C++
-
-Electron-Cloud explores whether modern systems programming can provide a clean alternative foundation for computational chemistry infrastructure.
-
----
-
-## Current Status
-
-Electron-Cloud is an active independent development project focused on architectural design and foundational implementations.
-
-It is not intended to replace established quantum chemistry packages but to serve as:
-
-- A research-learning platform
-- A modular electronic structure sandbox
-- A foundation for potential future method development
-
----
-
-## Installation
-
-Clone the repository:
-
-
-
-Run:
-
-
-```bash
-cargo run
-```
-
-
-
-
-
-```bash
-git clone https://github.com/lnife/Electron-Cloud.git
-cd Electron-Cloud
-cargo build
-```
-
-
-
----
-
-## Roadmap
-
-- Basis function abstraction layer
-- Integral evaluation module
-- Minimal Hartree–Fock prototype
-- Modular Hamiltonian representation
-- Numerical benchmarking utilities
-- Documentation expansion
-
----
-
-## Background
-
-This project is developed alongside formal training in:
-
-- Density Functional Theory
-- Magnetically Induced Current Density Analysis
-- Vibronic Coupling Models
-- Electronic Structure Theory
-
-Electron-Cloud reflects an effort to deepen understanding of quantum chemical methods by constructing their computational foundations directly.
+Both versions serve as computational learning tools rather than production quantum chemistry software.
 
 ---
 
 ## Author
 
-**Bhaskar Malviya**  
-Computational Chemistry | Electronic Structure Theory | Scientific Programming  
+Lnifelias Stargarden  
+(Real name: Bhaskar Malviya)  
 
-GitHub: https://github.com/lnife](https://github.com/lnife)
+Computational Chemistry | Quantum Chemistry | Scientific Programming  
