@@ -1,3 +1,11 @@
+# # Deprecated
+
+This repository is deprecated and no longer maintained.
+
+Use this repository instead
+
+https://github.com/Inife/Electron-Cloud 
+
 # Electron Cloud (OpenGL Edition)
 
 A hydrogenic orbital visualization toolkit written in Rust using OpenGL (GL + GLSL) through C library bindings.
